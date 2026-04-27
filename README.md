@@ -95,16 +95,39 @@ LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH" \
 
 ### 2. クライアント側（ローカル PC）
 
+#### Linux / macOS (bash, zsh)
+
 ```bash
 conda activate qwen3vl-vllm-fastapi   # または `pip install opencv-python pillow requests` だけ
 export QWEN_VL_API=http://<gpu-host>:8000
 python Submit_QwenVL.py --video ./train20.mp4
 ```
 
+#### Windows (PowerShell)
+
+```powershell
+pip install pillow opencv-python requests
+$env:QWEN_VL_API = "http://<gpu-host>:8000"
+python Submit_QwenVL.py --video train20.mp4 --api $env:QWEN_VL_API
+```
+
+`$env:QWEN_VL_API` を設定済みなら `--api` は省略可能です:
+
+```powershell
+python Submit_QwenVL.py --video train20.mp4
+```
+
+サーバ疎通確認:
+
+```powershell
+curl http://<gpu-host>:8000/healthz
+# → {"status":"ok","model_loaded":true}
+```
+
 主なオプション:
 
 - `--video` 入力動画ファイル（既定: `./train20.mp4`）
-- `--api` Recognition API のベース URL（既定: `$QWEN_VL_API` または `http://localhost:8000`）
+- `--api` Recognition API の **ベース URL**（既定: `$QWEN_VL_API` または `http://localhost:8000`）。`/classify` はスクリプト側で自動付与されるので不要です
 - `--out` 注釈付き画像の保存先（既定: `annotated_frames_qwenvl/train20`）
 - `--no-gui` `cv2.imshow` を使わずに保存のみ行う（GUI が無いサーバ向け）
 
