@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+
+# 入出力
+*.mp4
+annotated_frames_qwenvl/
+annotated_frames/
