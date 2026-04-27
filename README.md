@@ -137,9 +137,26 @@ curl http://<gpu-host>:8000/healthz
 
 - GPU サーバ: NVIDIA GPU（bfloat16 で動作させる前提）、Python 3.10+、vLLM が動作する CUDA 環境
 - ローカル PC: Python 3.10+、OpenCV / Pillow / requests
-- 日本語表示: Noto Sans JP / Noto Sans CJK / IPA ゴシック等。`JP_FONT_PATH` 環境変数でフォントパスを直接指定することも可能です。
+- 日本語表示: 以下のフォントが自動検出されます。`JP_FONT_PATH` 環境変数でフォントパスを直接指定することも可能です。
+  - Linux: Noto Sans JP / Noto Sans CJK / IPA ゴシック
+  - Windows: メイリオ (`meiryo.ttc`) / 游ゴシック (`YuGothM.ttc` 等) / MS ゴシック (`msgothic.ttc`)
+  - macOS: ヒラギノ角ゴシック
 
 ## Troubleshooting
+
+### 注釈の日本語が「□□□」と豆腐文字化する
+
+Pillow が日本語フォントを見つけられず、英字のみのデフォルトフォントにフォールバックしている状態です。`Submit_QwenVL.py` は Linux / Windows / macOS の代表的な日本語フォントを自動検出しますが、見つからない環境では `JP_FONT_PATH` で直接指定してください。
+
+```powershell
+# Windows (PowerShell)
+$env:JP_FONT_PATH = "C:\Windows\Fonts\meiryo.ttc"
+```
+
+```bash
+# Linux / macOS
+export JP_FONT_PATH=/usr/share/fonts/truetype/noto/NotoSansJP-Regular.ttf
+```
 
 ### `ImportError: ... CXXABI_1.3.15 not found ... libicui18n.so.78`
 

@@ -65,12 +65,25 @@ def load_japanese_font(size: int) -> ImageFont.FreeTypeFont:
         except Exception:
             pass
 
+    win_dir = os.environ.get("WINDIR", r"C:\Windows")
     candidates = [
+        # Linux (Noto / IPA)
         "/usr/share/fonts/truetype/noto/NotoSansJP-Bold.ttf",
         "/usr/share/fonts/truetype/noto/NotoSansJP-Regular.ttf",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+        # Windows (Meiryo / Yu Gothic / MS Gothic)
+        os.path.join(win_dir, "Fonts", "meiryob.ttc"),
+        os.path.join(win_dir, "Fonts", "meiryo.ttc"),
+        os.path.join(win_dir, "Fonts", "YuGothB.ttc"),
+        os.path.join(win_dir, "Fonts", "YuGothM.ttc"),
+        os.path.join(win_dir, "Fonts", "YuGothR.ttc"),
+        os.path.join(win_dir, "Fonts", "msgothic.ttc"),
+        # macOS
+        "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "/Library/Fonts/Hiragino Sans GB.ttc",
     ]
     for p in candidates:
         if os.path.isfile(p):
