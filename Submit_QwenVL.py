@@ -215,8 +215,10 @@ def process_video(video_path: str, api_base: str, output_dir: str, no_gui: bool)
         sys.exit(1)
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    hop = max(1, int(round(fps * 1)))  # 1秒ごと
-    print(f"[INFO] Opened video: {video_path}, fps={fps:.2f}, hop={hop}")
+    extract_interval_sec = 1.0  # 動画タイムラインで1秒おきに抽出
+    send_interval_sec = 1.0     # 実時間で1秒おきに送信
+    print(f"[INFO] Opened video: {video_path}, fps={fps:.2f}")
+    print(f"[INFO] Extract every {extract_interval_sec:.2f}s, send every {send_interval_sec:.2f}s")
     print(f"[INFO] Recognition API: {api_base}")
     print(f"[INFO] Output dir: {output_dir}")
 
@@ -228,28 +230,45 @@ def process_video(video_path: str, api_base: str, output_dir: str, no_gui: bool)
             print(f"[WARN] GUI を開けませんでした: {e} ／ --no-gui 相当で続行します。")
             no_gui = True
 
+    def wait_with_display(seconds: float):
+        end_t = time.time() + seconds
+        while True:
+            pump_display(window_name, no_gui)
+            remain = end_t - time.time()
+            if remain <= 0:
+                return
+            time.sleep(min(0.02, remain))
+
     spawned: list[threading.Thread] = []
-    idx = 0
+    sec = 0.0
+    last_spawn_wall = 0.0
     try:
         while True:
+            cap.set(cv2.CAP_PROP_POS_MSEC, sec * 1000.0)
             ret, frame = cap.read()
             if not ret:
                 print("[INFO] Video end or cannot read more frames.")
                 break
 
-            if idx % hop == 0:
-                resized = cv2.resize(frame, (480, 270))
-                pil = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
-                t = threading.Thread(
-                    target=worker, args=(idx, pil, api_base, output_dir), daemon=True
-                )
-                t.start()
-                spawned.append(t)
-                print(f"[INFO] Spawned worker for frame {idx:06d}")
+            # 実時間で 1 秒間隔になるよう待機（最初の1回はそのまま送信）
+            if last_spawn_wall > 0.0:
+                wait_remain = send_interval_sec - (time.time() - last_spawn_wall)
+                if wait_remain > 0:
+                    wait_with_display(wait_remain)
 
-            # 各ループで表示キューを掃く（メインスレッドで描画）
+            frame_idx = int(round(sec * fps))
+            resized = cv2.resize(frame, (480, 270))
+            pil = Image.fromarray(cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
+            t = threading.Thread(
+                target=worker, args=(frame_idx, pil, api_base, output_dir), daemon=True
+            )
+            t.start()
+            spawned.append(t)
+            last_spawn_wall = time.time()
+            print(f"[INFO] Spawned worker for frame {frame_idx:06d} (t={sec:.2f}s)")
+
             pump_display(window_name, no_gui)
-            idx += 1
+            sec += extract_interval_sec
     except KeyboardInterrupt:
         print("[INFO] interrupted by user.")
     finally:

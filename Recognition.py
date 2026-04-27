@@ -92,7 +92,7 @@ class QwenVLEngine:
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "image": pil_image},
+                    {"type": "image_pil", "image_pil": pil_image},
                     {"type": "text", "text": prompt},
                 ],
             },
