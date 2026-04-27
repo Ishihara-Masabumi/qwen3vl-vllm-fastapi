@@ -45,6 +45,10 @@ conda activate qwen3vl-vllm-fastapi
 pip install vllm fastapi uvicorn pillow python-multipart
 # クライアント側
 pip install opencv-python requests
+
+# システムの libstdc++ が古いディストリビューション (Ubuntu 22.04 など) では
+# vLLM が要求する CXXABI_1.3.15 を満たすため conda の libstdcxx-ng を入れる
+conda install -y -c conda-forge libstdcxx-ng libgcc-ng
 ```
 
 確認:
@@ -67,7 +71,18 @@ python -c "import vllm, fastapi, cv2, torch; print(vllm.__version__, torch.cuda.
 
 ```bash
 conda activate qwen3vl-vllm-fastapi
-python Recognition.py --host 0.0.0.0 --port 8000
+# conda の libstdc++ を最優先にしてから起動（後述の Troubleshooting 参照）
+LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH" \
+  python Recognition.py --host 0.0.0.0 --port 8000
+```
+
+バックグラウンドで動かす例:
+
+```bash
+mkdir -p logs
+LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH" \
+  nohup python -u Recognition.py --host 0.0.0.0 --port 8000 \
+  > logs/recognition.log 2>&1 &
 ```
 
 主なオプション:
@@ -76,7 +91,7 @@ python Recognition.py --host 0.0.0.0 --port 8000
 - `--max-model-len` 最大コンテキスト長（既定: 8192）
 - `--gpu-mem-util` vLLM の GPU メモリ使用率（既定: 0.90）
 
-ヘルスチェック: `GET /healthz`
+ヘルスチェック: `GET /healthz` → `{"status":"ok","model_loaded":true}`
 
 ### 2. クライアント側（ローカル PC）
 
@@ -100,6 +115,32 @@ python Submit_QwenVL.py --video ./train20.mp4
 - GPU サーバ: NVIDIA GPU（bfloat16 で動作させる前提）、Python 3.10+、vLLM が動作する CUDA 環境
 - ローカル PC: Python 3.10+、OpenCV / Pillow / requests
 - 日本語表示: Noto Sans JP / Noto Sans CJK / IPA ゴシック等。`JP_FONT_PATH` 環境変数でフォントパスを直接指定することも可能です。
+
+## Troubleshooting
+
+### `ImportError: ... CXXABI_1.3.15 not found ... libicui18n.so.78`
+
+`from vllm import LLM` を実行すると次のようなエラーで落ちる場合があります。
+
+```
+ImportError: /lib/x86_64-linux-gnu/libstdc++.so.6: version `CXXABI_1.3.15' not found
+(required by .../envs/qwen3vl-vllm-fastapi/lib/python3.11/lib-dynload/../.././libicui18n.so.78)
+```
+
+原因は、`torch` をロードする過程でシステムの古い `libstdc++.so.6` がプロセスに先に固定され、その後 `sqlite3` 経由で読み込まれる conda の新しい `libicui18n.so.78` が要求する `CXXABI_1.3.15` を満たせなくなることです（Ubuntu 22.04 などで発生）。
+
+対処は次の 2 段構え:
+
+1. conda 環境に新しい `libstdcxx-ng` を入れる
+   ```bash
+   conda install -y -c conda-forge libstdcxx-ng libgcc-ng
+   ```
+2. Python 起動時に conda の lib をシステムより優先させる
+   ```bash
+   LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH" python Recognition.py ...
+   ```
+
+`conda activate` 時に常に有効化したい場合は、シェル起動スクリプトや `~/.bashrc` にエクスポートを追記しておくと便利です。
 
 ## ライセンス
 
