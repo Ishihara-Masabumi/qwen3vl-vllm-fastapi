@@ -33,10 +33,40 @@ API の応答は次のような JSON です。
 
 ## 使い方
 
+### 0. conda 仮想環境（推奨）
+
+サーバ／クライアント側を同じ環境でまとめて使えるよう、Python 3.11 の conda 環境を作成します。
+
+```bash
+conda create -y -n qwen3vl-vllm-fastapi python=3.11 pip
+conda activate qwen3vl-vllm-fastapi
+
+# サーバ側
+pip install vllm fastapi uvicorn pillow python-multipart
+# クライアント側
+pip install opencv-python requests
+```
+
+確認:
+
+```bash
+python -c "import vllm, fastapi, cv2, torch; print(vllm.__version__, torch.cuda.is_available())"
+```
+
+参考までに、本リポジトリで動作確認したバージョンは以下のとおりです（CUDA 12.8 / GPU マシン）:
+
+- Python 3.11.15
+- vllm 0.19.1
+- torch 2.10.0+cu128
+- fastapi 0.136.1 / uvicorn 0.46.0 / python-multipart 0.0.26
+- Pillow 12.2.0 / opencv-python 4.13.0 / requests 2.33.1
+
+なお `Qwen/Qwen3-VL-8B-Instruct` の重みは初回起動時に Hugging Face からダウンロードされ、約 16GB のディスクを消費します。
+
 ### 1. サーバ側（GPU マシン）
 
 ```bash
-pip install vllm fastapi uvicorn pillow python-multipart
+conda activate qwen3vl-vllm-fastapi
 python Recognition.py --host 0.0.0.0 --port 8000
 ```
 
@@ -51,7 +81,7 @@ python Recognition.py --host 0.0.0.0 --port 8000
 ### 2. クライアント側（ローカル PC）
 
 ```bash
-pip install opencv-python pillow requests
+conda activate qwen3vl-vllm-fastapi   # または `pip install opencv-python pillow requests` だけ
 export QWEN_VL_API=http://<gpu-host>:8000
 python Submit_QwenVL.py --video ./train20.mp4
 ```
